@@ -1,0 +1,73 @@
+#!/bin/bash
+
+if [[ "$1" == "clean" || "$1" == "repull" ]]; then
+	echo "========"
+	echo "CLEANING"
+	echo "========"
+	#rm -rf ./containers/nestjs/node_modules
+	#rm -rf ./containers/vitejs/node_modules
+	docker-compose down --rmi all --volumes
+	rm -rf ./logs/ 2> /dev/null
+	if [[ "$1" == "clean" ]]; then
+		exit
+	fi
+fi
+
+echo ""
+echo "[NOTE] The first build will take a while, please be patient"
+echo "[NOTE] docker-compose will be launched in the background."
+echo "[NOTE] Don't forget to down it with ./build clean"
+echo "[NOTE] Logs will be created at ./logs/"
+echo ""
+echo "==========================="
+echo "What would you like to log?"
+echo "==========================="
+echo "1 - NEST    - PORT 3000"
+echo "2 - VITE    - PORT 3333"
+echo "3 - PSQL    - PORT 5432"
+#echo "4 - PGADMIN - PORT 8080"
+#echo "5 - PONG  [DISABLED] - PORT 3001 (Back) - 3333 (Front)"
+#echo "6 - OUATH [DISABLED] - PORT 3009 (Back) - 5173 (Front)"
+echo "0 - ALL"
+
+read -p "> " INPUT
+mkdir -p ./logs
+
+function dcl()
+{
+	docker-compose logs -f $@ 2>&1 | tee ./logs/log_containers.txt
+}
+
+#docker-compose up --build -d | tail -f  >> ./logs/log_build.txt
+
+docker-compose down 2>&1 > /dev/null
+if [[ "$1" == "repull" ]]; then
+	docker-compose up --build -d 2>&1 | tee ./logs/log_build.txt
+else
+	docker-compose up -d 2>&1 | tee ./logs/log_build.txt
+fi
+#docker compose up --build -d  | tee ./logs/log_build.txt
+
+if [[ $INPUT -eq "1" ]]; then
+	dcl nestjs
+elif [[ $INPUT -eq "2" ]]; then
+	dcl vitejs
+elif [[ $INPUT -eq "3" ]]; then
+	dcl postgres
+	#elif [[ $INPUT -eq "4" ]]; then
+	#dcl pgadmin
+	#elif [[ $INPUT -eq "5" ]]; then
+	#dcl pong pong_socket
+	#elif [[ $INPUT -eq "6" ]]; then
+	#dcl oauth_front oauth_back
+else
+	dcl \
+		vitejs   \
+		nestjs   \
+		postgres \
+		#pgadmin  \
+			#pong     \
+			#pong_socket \
+			#oauth_front oauth_back \
+fi
+
